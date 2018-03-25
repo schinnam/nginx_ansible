@@ -1,0 +1,23 @@
+---
+ - hosts: all
+   become: yes
+
+   tasks:
+         -name: Add Nginx Repository
+          apt_repository: repo='ppa:nginx/stable' state=present
+          register: ppainstalled
+          notify:
+                  - Update Apt
+        
+         -name: Install Nginx
+          apt: pkg=nginx state=latest
+          when: ppainstalled|success
+          notify:
+                  - Start Nginx
+
+   handlers:     
+         -name: Update Apt
+          apt: update_chache=true  
+
+         -name: Start Nginx  
+          service: name=nginx state=started
