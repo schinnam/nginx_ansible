@@ -1,23 +1,43 @@
 ---
- - hosts: all
-   become: yes
+# Example shows using the local machine still
+# Remove 'connection' and set hosts to 'remote' for a remote connection
+- hosts: local
+  connection: local
+  become: yes
+  #become_user: root
+  vars:
+   - docroot: /var/www/html/serversforhackers
+  tasks:
+   - name: Add Nginx Repository
+     apt_repository:
+       repo: ppa:nginx/stable
+       state: present
+     register: ppastable
+   - name: Install Nginx
+     apt:
+       name: nginx
+       state: installed
+       update_cache: true
+     when: ppastable|success  
+     notify:
+      - Start Nginx
+   - name: Create Web Root
+     file:
+      path: '{{ docroot }}'
+      mode: 775
+      state: directory
+      owner: www-data
+      group: www-data
+     notify:
+      - Reload Nginx
 
-   tasks:
-         -name: Add Nginx Repository
-          apt_repository: repo='ppa:nginx/stable' state=present
-          register: ppainstalled
-          notify:
-                  - Update Apt
-        
-         -name: Install Nginx
-          apt: pkg=nginx state=latest
-          when: ppainstalled|success
-          notify:
-                  - Start Nginx
+  handlers:
+   - name: Start Nginx
+     service:
+       name: nginx
+       state: started
+   - name: Reload Nginx
+     service:
+      name: nginx
+      state: reloaded
 
-   handlers:     
-         -name: Update Apt
-          apt: update_chache=true  
-
-         -name: Start Nginx  
-          service: name=nginx state=started
